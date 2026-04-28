@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyLink - Airline Reservation System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <span class="icon">✈️</span>
+                <h1>SkyLink</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#" class="active">Home</a></li>
+                    <li><a href="#">My Bookings</a></li>
+                    <li><a href="#">Support</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Search Section -->
+        <section class="search-box card">
+            <h2>Find Your Next Flight</h2>
+            <div class="search-form">
+                <div class="input-group">
+                    <label for="from">From</label>
+                    <input type="text" id="from" placeholder="Departure City (e.g., Karachi)" value="Karachi">
+                </div>
+                <div class="input-group">
+                    <label for="to">To</label>
+                    <input type="text" id="to" placeholder="Arrival City (e.g., Lahore)" value="Lahore">
+                </div>
+                <button id="search-btn" class="btn-primary">Search Flights</button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="hidden">
+            <h3>Available Flights</h3>
+            <div id="flights-list" class="flights-grid">
+                <!-- Flights will be injected here -->
+            </div>
+        </section>
+
+        <!-- Booking Modal -->
+        <div id="booking-modal" class="modal hidden">
+            <div class="modal-content card">
+                <span class="close-btn">&times;</span>
+                <h2 id="modal-title">Complete Your Booking</h2>
+                
+                <div id="passenger-form">
+                    <h4>Step 1: Passenger Details</h4>
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="p-name" placeholder="Enter name">
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="p-email" placeholder="Enter email">
+                    </div>
+                    <div class="input-group">
+                        <label>Phone</label>
+                        <input type="text" id="p-phone" placeholder="Enter phone">
+                    </div>
+                    <div class="input-group">
+                        <label>Passport Number</label>
+                        <input type="text" id="p-passport" placeholder="Enter passport #">
+                    </div>
+                    <button id="next-to-seats" class="btn-primary">Next: Select Seat</button>
+                </div>
+
+                <div id="seat-selection" class="hidden">
+                    <h4>Step 2: Select Your Seat</h4>
+                    <div id="seats-grid" class="seats-container">
+                        <!-- Seats will be injected here -->
+                    </div>
+                    <button id="next-to-payment" class="btn-primary" disabled>Next: Payment</button>
+                </div>
+
+                <div id="payment-section" class="hidden">
+                    <h4>Step 3: Payment</h4>
+                    <div class="payment-details">
+                        <p>Total Amount: <span id="total-amount">$0</span></p>
+                        <div class="input-group">
+                            <label>Payment Method</label>
+                            <select id="pay-method">
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="PayPal">PayPal</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="confirm-booking" class="btn-primary">Confirm & Pay</button>
+                </div>
+
+                <div id="success-message" class="hidden">
+                    <div class="success-icon">✅</div>
+                    <h3>Booking Confirmed!</h3>
+                    <p>Your flight has been reserved successfully.</p>
+                    <button onclick="location.reload()" class="btn-secondary">Done</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 SkyLink Airline Reservation System - University Project</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
