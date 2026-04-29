@@ -218,3 +218,48 @@ INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
 -- Flight 12 (Frankfurt -> Tokyo)
 INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
 (12, '1A', 'First', 'Available'), (12, '10A', 'Business', 'Available'), (12, '40A', 'Economy', 'Available');
+
+-- 3. Insert Domestic Pakistan Flights (Flights 13 to 20)
+INSERT INTO flight (airline_name, departure_city, arrival_city, departure_time, arrival_time) VALUES
+('PIA', 'Karachi', 'Peshawar', CURRENT_DATE + INTERVAL '1 day 07:00:00', CURRENT_DATE + INTERVAL '1 day 09:00:00'),
+('AirBlue', 'Peshawar', 'Karachi', CURRENT_DATE + INTERVAL '1 day 11:00:00', CURRENT_DATE + INTERVAL '1 day 13:00:00'),
+('Serene Air', 'Islamabad', 'Quetta', CURRENT_DATE + INTERVAL '2 days 10:00:00', CURRENT_DATE + INTERVAL '2 days 11:45:00'),
+('PIA', 'Quetta', 'Islamabad', CURRENT_DATE + INTERVAL '2 days 14:00:00', CURRENT_DATE + INTERVAL '2 days 15:45:00'),
+('AirSial', 'Lahore', 'Multan', CURRENT_DATE + INTERVAL '1 day 08:30:00', CURRENT_DATE + INTERVAL '1 day 09:30:00'),
+('Fly Jinnah', 'Multan', 'Lahore', CURRENT_DATE + INTERVAL '1 day 16:00:00', CURRENT_DATE + INTERVAL '1 day 17:00:00'),
+('PIA', 'Karachi', 'Sialkot', CURRENT_DATE + INTERVAL '3 days 09:00:00', CURRENT_DATE + INTERVAL '3 days 10:45:00'),
+('AirBlue', 'Sialkot', 'Karachi', CURRENT_DATE + INTERVAL '3 days 13:00:00', CURRENT_DATE + INTERVAL '3 days 14:45:00');
+
+-- 4. Insert Seats for New Domestic Flights (Flights 13 to 20)
+-- Flight 13 (Karachi -> Peshawar)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(13, '1A', 'Business', 'Available'), (13, '1B', 'Business', 'Available'),
+(13, '5A', 'Economy', 'Available'), (13, '5B', 'Economy', 'Available'), (13, '5C', 'Economy', 'Available');
+
+-- Flight 14 (Peshawar -> Karachi)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(14, '2A', 'Business', 'Available'), (14, '10A', 'Economy', 'Available'), (14, '10B', 'Economy', 'Available');
+
+-- Flight 15 (Islamabad -> Quetta)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(15, '1A', 'Business', 'Available'), (15, '12F', 'Economy', 'Available'), (15, '12E', 'Economy', 'Available');
+
+-- Flight 16 (Quetta -> Islamabad)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(16, '1C', 'Business', 'Available'), (16, '20A', 'Economy', 'Available'), (16, '20B', 'Economy', 'Available');
+
+-- Flight 17 (Lahore -> Multan)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(17, '1A', 'Economy', 'Available'), (17, '1B', 'Economy', 'Available'), (17, '1C', 'Economy', 'Available'), (17, '1D', 'Economy', 'Available');
+
+-- Flight 18 (Multan -> Lahore)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(18, '2A', 'Economy', 'Available'), (18, '2B', 'Economy', 'Available'), (18, '2C', 'Economy', 'Available');
+
+-- Flight 19 (Karachi -> Sialkot)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(19, '1A', 'Business', 'Available'), (19, '10A', 'Economy', 'Available'), (19, '10B', 'Economy', 'Available');
+
+-- Flight 20 (Sialkot -> Karachi)
+INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
+(20, '1B', 'Business', 'Available'), (20, '15A', 'Economy', 'Available'), (20, '15B', 'Economy', 'Available');
