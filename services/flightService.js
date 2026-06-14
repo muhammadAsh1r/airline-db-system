@@ -8,37 +8,52 @@ const getFlights = async (from, to, date, seatClass) => {
     // Log search to MongoDB
     await logSearch(from, to);
 
-    // 1. Check Redis Cache
-    try {
-        const cachedData = await redisClient.get(cacheKey);
-        if (cachedData) {
-            console.log('Serving flights from Redis cache');
-            return JSON.parse(cachedData);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = (date === todayStr);
+
+    // 1. Check Redis Cache (Only for future dates, as today's flights change by the hour)
+    if (!isToday) {
+        try {
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.log('Serving flights from Redis cache');
+                return JSON.parse(cachedData);
+            }
+        } catch (err) {
+            console.error('Redis error:', err.message);
         }
-    } catch (err) {
-        console.error('Redis error:', err.message);
     }
 
     // 2. Fetch from PostgreSQL
     console.log('Fetching flights from PostgreSQL');
     let query = `
-        SELECT f.* FROM flight f
+        SELECT f.*, 
+               (SELECT COUNT(*) FROM seat s 
+                WHERE s.flight_id = f.flight_id 
+                AND s.seat_class = $3 
+                AND s.seat_status = 'Available'
+               ) as available_seats
+        FROM flight f
         WHERE f.departure_city ILIKE $1 AND f.arrival_city ILIKE $2
     `;
-    const params = [from, to];
+    const params = [from, to, seatClass || 'Economy'];
 
     if (date) {
         query += ` AND DATE(f.departure_time) = $${params.length + 1}`;
         params.push(date);
+        
+        if (isToday) {
+            query += ` AND f.departure_time > $${params.length + 1}`;
+            params.push(new Date());
+        }
     }
 
-    // If seatClass is specified, we might want to ensure the flight has such seats available
-    // For simplicity, we just filter the flights. In a real system, we'd join with seats.
-    
+    query += ` ORDER BY f.departure_time ASC`;
+
     const { rows } = await db.query(query, params);
 
-    // 3. Store in Redis (Expire in 5 minutes)
-    if (rows.length > 0) {
+    // 3. Store in Redis (Only for future dates)
+    if (rows.length > 0 && !isToday) {
         try {
             await redisClient.setEx(cacheKey, 300, JSON.stringify(rows));
         } catch (err) {
@@ -49,11 +64,18 @@ const getFlights = async (from, to, date, seatClass) => {
     return rows;
 };
 
-const getSeats = async (flightId) => {
+const getFlight = async (flightId) => {
+    const query = 'SELECT * FROM flight WHERE flight_id = $1';
+    const { rows } = await db.query(query, [flightId]);
+    return rows[0];
+};
+
+const getSeats = async (flightId, sessionId = null) => {
     const query = `
         SELECT s.*, 
                sr.status as reservation_status,
-               sr.hold_expiry
+               sr.hold_expiry,
+               sr.session_id as hold_session_id
         FROM seat s
         LEFT JOIN seat_reservations sr ON s.seat_id = sr.seat_id AND s.flight_id = sr.flight_id
         WHERE s.flight_id = $1
@@ -61,24 +83,24 @@ const getSeats = async (flightId) => {
     `;
     const { rows } = await db.query(query, [flightId]);
     
-    // Logical status check: if Held but expired, it's actually Available
+    const now = new Date();
     return rows.map(s => {
-        const now = new Date();
         const expiry = s.hold_expiry ? new Date(s.hold_expiry) : null;
-        let status = s.seat_status; // Base status from seat table
+        let display_status = 'Available';
 
-        if (s.reservation_status === 'Booked') {
-            status = 'Booked';
+        if (s.reservation_status === 'Booked' || s.seat_status === 'Booked') {
+            display_status = 'Booked';
         } else if (s.reservation_status === 'Held' && expiry && expiry > now) {
-            status = 'Held';
-        } else if (s.seat_status === 'Booked') {
-             status = 'Booked';
-        } else {
-            status = 'Available';
+            display_status = (sessionId && s.hold_session_id === sessionId) ? 'Yours' : 'Held';
         }
-        
-        return { ...s, display_status: status };
+
+        return {
+            ...s,
+            display_status,
+            is_mine: display_status === 'Yours',
+            hold_expires_at: expiry && expiry > now ? expiry.toISOString() : null
+        };
     });
 };
 
-module.exports = { getFlights, getSeats };
+module.exports = { getFlights, getFlight, getSeats };

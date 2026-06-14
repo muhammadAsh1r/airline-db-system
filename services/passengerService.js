@@ -1,24 +1,26 @@
 const db = require('../config/db');
 
 const createPassenger = async (data) => {
-    const { name, email, phone_number, passport_number, given_names, surnames, nationality, gender, dob, passport_expiry } = data;
+    const { 
+        given_names, 
+        surnames, 
+        email, 
+        phone_number, 
+        passport_number, 
+        nationality, 
+        gender, 
+        dob, 
+        passport_expiry,
+        type 
+    } = data;
     
     const query = `
-        INSERT INTO passenger (name, email, phone_number, passport_number, given_names, surnames, nationality, gender, dob, passport_expiry)
+        INSERT INTO passenger (first_name, last_name, email, phone_number, passport_number, nationality, gender, dob, passport_expiry, passenger_type)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (email) DO UPDATE SET 
-            name = EXCLUDED.name,
-            given_names = EXCLUDED.given_names,
-            surnames = EXCLUDED.surnames,
-            phone_number = EXCLUDED.phone_number,
-            passport_number = EXCLUDED.passport_number,
-            nationality = EXCLUDED.nationality,
-            gender = EXCLUDED.gender,
-            dob = EXCLUDED.dob,
-            passport_expiry = EXCLUDED.passport_expiry
         RETURNING *
     `;
-    const { rows } = await db.query(query, [name, email, phone_number, passport_number, given_names, surnames, nationality, gender, dob, passport_expiry]);
+    const params = [given_names, surnames, email, phone_number, passport_number, nationality, gender, dob, passport_expiry, type];
+    const { rows } = await db.query(query, params);
     return rows[0];
 };
 

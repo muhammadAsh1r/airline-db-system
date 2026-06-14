@@ -1,21 +1,33 @@
-const { SearchHistory, ActivityLog } = require('../models/logs');
+const { SearchHistory, ActivityLog, SystemLog } = require('../models/logs');
+const { isMongoReady } = require('../config/mongo');
+
+const skipIfOffline = () => !isMongoReady();
 
 const logSearch = async (from, to) => {
+    if (skipIfOffline()) return;
     try {
-        const search = new SearchHistory({ from, to });
-        await search.save();
+        await SearchHistory.create({ from, to });
     } catch (err) {
-        console.error('Error logging search:', err.message);
+        console.error('Background logSearch error:', err.message);
     }
 };
 
 const logActivity = async (action, details) => {
+    if (skipIfOffline()) return;
     try {
-        const log = new ActivityLog({ action, details });
-        await log.save();
+        await ActivityLog.create({ action, details });
     } catch (err) {
-        console.error('Error logging activity:', err.message);
+        console.error('Background logActivity error:', err.message);
     }
 };
 
-module.exports = { logSearch, logActivity };
+const logSystem = async (level, message, meta = {}) => {
+    if (skipIfOffline()) return;
+    try {
+        await SystemLog.create({ level, message, meta });
+    } catch (err) {
+        console.error('Background logSystem error:', err.message);
+    }
+};
+
+module.exports = { logSearch, logActivity, logSystem };

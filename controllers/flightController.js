@@ -15,12 +15,24 @@ const getFlights = async (req, res) => {
 
 const getSeats = async (req, res) => {
     try {
-        const { flight_id } = req.params;
-        const seats = await flightService.getSeats(flight_id);
+        const flightId = req.params.flightId || req.params.flight_id;
+        const { session_id: sessionId } = req.query;
+        const seats = await flightService.getSeats(flightId, sessionId || null);
         res.json(seats);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-module.exports = { getFlights, getSeats };
+const getFlight = async (req, res) => {
+    try {
+        const { flightId } = req.params;
+        const flight = await flightService.getFlight(flightId);
+        if (!flight) return res.status(404).json({ error: 'Flight not found' });
+        res.json(flight);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+module.exports = { getFlights, getSeats, getFlight };

@@ -3,19 +3,52 @@
 -- Drop tables if they exist (for clean setup)
 DROP TABLE IF EXISTS seat_reservations CASCADE;
 DROP TABLE IF EXISTS payment CASCADE;
+DROP TABLE IF EXISTS baggage CASCADE;
 DROP TABLE IF EXISTS booking CASCADE;
 DROP TABLE IF EXISTS seat CASCADE;
 DROP TABLE IF EXISTS flight CASCADE;
+DROP TABLE IF EXISTS flight_schedule CASCADE;
+DROP TABLE IF EXISTS schedule_seat_template CASCADE;
 DROP TABLE IF EXISTS passenger CASCADE;
 DROP TABLE IF EXISTS airport CASCADE;
 
 -- Passenger Table
 CREATE TABLE passenger (
     passenger_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
-    passport_number VARCHAR(50) UNIQUE NOT NULL
+    passport_number VARCHAR(50) UNIQUE NOT NULL,
+    nationality VARCHAR(100),
+    gender VARCHAR(20),
+    dob DATE,
+    passport_expiry DATE,
+    passenger_type VARCHAR(20) -- Adult, Child, Infant
+);
+
+-- Flight Schedule Table
+CREATE TABLE flight_schedule (
+    schedule_id SERIAL PRIMARY KEY,
+    airline_name VARCHAR(100) NOT NULL,
+    departure_city VARCHAR(100) NOT NULL,
+    arrival_city VARCHAR(100) NOT NULL,
+    departure_time_daily TIME NOT NULL,
+    arrival_time_daily TIME NOT NULL,
+    frequency VARCHAR(20) NOT NULL, -- Daily, Weekly
+    day_of_week INT, -- 0-6 (Sunday-Saturday)
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Schedule Seat Template
+CREATE TABLE schedule_seat_template (
+    template_id SERIAL PRIMARY KEY,
+    schedule_id INT REFERENCES flight_schedule(schedule_id) ON DELETE CASCADE,
+    seat_number VARCHAR(10) NOT NULL,
+    seat_class VARCHAR(20) NOT NULL
 );
 
 -- Flight Table
@@ -25,7 +58,8 @@ CREATE TABLE flight (
     departure_city VARCHAR(100) NOT NULL,
     arrival_city VARCHAR(100) NOT NULL,
     departure_time TIMESTAMP NOT NULL,
-    arrival_time TIMESTAMP NOT NULL
+    arrival_time TIMESTAMP NOT NULL,
+    schedule_id INT REFERENCES flight_schedule(schedule_id) ON DELETE SET NULL
 );
 
 -- Seat Table
@@ -43,8 +77,17 @@ CREATE TABLE booking (
     passenger_id INT REFERENCES passenger(passenger_id),
     flight_id INT REFERENCES flight(flight_id),
     seat_id INT REFERENCES seat(seat_id),
+    booking_reference VARCHAR(10) NOT NULL,
     booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     booking_status VARCHAR(20) DEFAULT 'Pending' CHECK (booking_status IN ('Pending', 'Confirmed', 'Cancelled'))
+);
+
+-- Baggage Table
+CREATE TABLE baggage (
+    baggage_id SERIAL PRIMARY KEY,
+    passenger_id INT REFERENCES passenger(passenger_id) ON DELETE CASCADE,
+    weight_selected DECIMAL(5, 2) NOT NULL,
+    extra_cost DECIMAL(10, 2) DEFAULT 0.00
 );
 
 -- Payment Table
@@ -56,210 +99,142 @@ CREATE TABLE payment (
     amount DECIMAL(10, 2) NOT NULL
 );
 
--- Sample Data
-
--- Flights
-INSERT INTO flight (airline_name, departure_city, arrival_city, departure_time, arrival_time) VALUES
-('SkyLink Air', 'Karachi', 'Lahore', '2026-05-01 10:00:00', '2026-05-01 11:30:00'),
-('SkyLink Air', 'Lahore', 'Karachi', '2026-05-01 14:00:00', '2026-05-01 15:30:00'),
-('Blue Sky', 'Islamabad', 'Karachi', '2026-05-02 08:00:00', '2026-05-02 10:00:00'),
-('Emerald Wings', 'Karachi', 'Islamabad', '2026-05-02 12:00:00', '2026-05-02 14:00:00');
-
--- Seats for Flight 1 (Karachi to Lahore)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(1, '1A', 'First', 'Available'),
-(1, '1B', 'First', 'Available'),
-(1, '10A', 'Business', 'Available'),
-(1, '10B', 'Business', 'Available'),
-(1, '20A', 'Economy', 'Available'),
-(1, '20B', 'Economy', 'Available');
-
--- Seats for Flight 2 (Lahore to Karachi)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(2, '1A', 'First', 'Available'),
-(2, '20A', 'Economy', 'Available');
-
--- Seats for Flight 3
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(3, '5A', 'Business', 'Available'),
-(3, '25C', 'Economy', 'Available');
-
--- Flights for Today and Tomorrow
-INSERT INTO flight (airline_name, departure_city, arrival_city, departure_time, arrival_time) VALUES
-('SkyLink Air', 'Karachi', 'Lahore', CURRENT_DATE + INTERVAL '10 hours', CURRENT_DATE + INTERVAL '11 hours 30 minutes'),
-('SkyLink Air', 'Lahore', 'Karachi', CURRENT_DATE + INTERVAL '14 hours', CURRENT_DATE + INTERVAL '15 hours 30 minutes'),
-('Blue Sky', 'Karachi', 'Lahore', CURRENT_DATE + INTERVAL '1 day 08:00:00', CURRENT_DATE + INTERVAL '1 day 09:30:00');
-
--- Seats for Flight 5 (Dynamic Today)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(5, '2A', 'First', 'Available'),
-(5, '5C', 'Business', 'Available'),
-(5, '12F', 'Premium Economy', 'Available'),
-(5, '25A', 'Economy', 'Available');
-
--- Seats for Flight 6
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(6, '1A', 'First', 'Available'),
-(6, '15B', 'Premium Economy', 'Available');
-
-
--- Airport Table
-CREATE TABLE airport (
-    airport_id SERIAL PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    city VARCHAR(100),
-    country VARCHAR(100)
-);
-
--- Insert Airports
-INSERT INTO airport (name, city, country) VALUES
-('Jinnah International Airport', 'Karachi', 'Pakistan'),
-('Allama Iqbal International Airport', 'Lahore', 'Pakistan'),
-('Islamabad International Airport', 'Islamabad', 'Pakistan'),
-('Bacha Khan International Airport', 'Peshawar', 'Pakistan'),
-('Multan International Airport', 'Multan', 'Pakistan'),
-('Sialkot International Airport', 'Sialkot', 'Pakistan'),
-('Faisalabad International Airport', 'Faisalabad', 'Pakistan'),
-('Quetta International Airport', 'Quetta', 'Pakistan'),
-('John F. Kennedy International Airport', 'New York', 'USA'),
-('Los Angeles International Airport', 'Los Angeles', 'USA'),
-('Chicago O''Hare International Airport', 'Chicago', 'USA'),
-('Dallas/Fort Worth International Airport', 'Dallas', 'USA'),
-('San Francisco International Airport', 'San Francisco', 'USA'),
-('Miami International Airport', 'Miami', 'USA'),
-('Hartsfield-Jackson Atlanta International Airport', 'Atlanta', 'USA'),
-('Indira Gandhi International Airport', 'Delhi', 'India'),
-('Chhatrapati Shivaji Maharaj International Airport', 'Mumbai', 'India'),
-('Kempegowda International Airport', 'Bangalore', 'India'),
-('Chennai International Airport', 'Chennai', 'India'),
-('Netaji Subhas Chandra Bose International Airport', 'Kolkata', 'India'),
-('Rajiv Gandhi International Airport', 'Hyderabad', 'India'),
-('Heathrow Airport', 'London', 'UK'),
-('Gatwick Airport', 'London', 'UK'),
-('Manchester Airport', 'Manchester', 'UK'),
-('Birmingham Airport', 'Birmingham', 'UK'),
-('Dubai International Airport', 'Dubai', 'UAE'),
-('Al Maktoum International Airport', 'Dubai', 'UAE'),
-('Abu Dhabi International Airport', 'Abu Dhabi', 'UAE'),
-('Sharjah International Airport', 'Sharjah', 'UAE'),
-('King Abdulaziz International Airport', 'Jeddah', 'Saudi Arabia'),
-('King Khalid International Airport', 'Riyadh', 'Saudi Arabia'),
-('Prince Mohammad bin Abdulaziz Airport', 'Medina', 'Saudi Arabia'),
-('Beijing Capital International Airport', 'Beijing', 'China'),
-('Shanghai Pudong International Airport', 'Shanghai', 'China'),
-('Guangzhou Baiyun International Airport', 'Guangzhou', 'China'),
-('Tokyo Haneda Airport', 'Tokyo', 'Japan'),
-('Narita International Airport', 'Tokyo', 'Japan'),
-('Kansai International Airport', 'Osaka', 'Japan'),
-('Frankfurt Airport', 'Frankfurt', 'Germany'),
-('Munich Airport', 'Munich', 'Germany'),
-('Berlin Brandenburg Airport', 'Berlin', 'Germany'),
-('Charles de Gaulle Airport', 'Paris', 'France'),
-('Orly Airport', 'Paris', 'France'),
-('Toronto Pearson International Airport', 'Toronto', 'Canada'),
-('Vancouver International Airport', 'Vancouver', 'Canada'),
-('Montréal–Trudeau International Airport', 'Montreal', 'Canada'),
-('Sydney Kingsford Smith Airport', 'Sydney', 'Australia'),
-('Melbourne Airport', 'Melbourne', 'Australia'),
-('Brisbane Airport', 'Brisbane', 'Australia');
-
 -- Stateful Seat Reservations Table
 CREATE TABLE seat_reservations (
     reservation_id SERIAL PRIMARY KEY,
     flight_id INT REFERENCES flight(flight_id) ON DELETE CASCADE,
     seat_id INT REFERENCES seat(seat_id) ON DELETE CASCADE,
     passenger_id INT REFERENCES passenger(passenger_id) ON DELETE SET NULL,
+    session_id VARCHAR(64),
     status VARCHAR(20) DEFAULT 'Held', -- 'Held' or 'Booked'
     hold_expiry TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '10 minutes'),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_seat_flight UNIQUE(flight_id, seat_id)
 );
 
--- ==========================================
--- DUMMY DATA FOR TESTING
--- ==========================================
+-- Airport Table
+CREATE TABLE airport (
+    airport_id SERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    city VARCHAR(100),
+    country VARCHAR(100),
+    iata_code VARCHAR(10) UNIQUE
+);
 
--- 1. Insert More International Flights
+-- Sample Data (Airports)
+INSERT INTO airport (name, city, country, iata_code) VALUES
+('Jinnah International Airport', 'Karachi', 'Pakistan', 'KHI'),
+('Allama Iqbal International Airport', 'Lahore', 'Pakistan', 'LHE'),
+('Islamabad International Airport', 'Islamabad', 'Pakistan', 'ISB'),
+('Dubai International Airport', 'Dubai', 'UAE', 'DXB'),
+('Heathrow Airport', 'London', 'UK', 'LHR'),
+('John F. Kennedy International Airport', 'New York', 'USA', 'JFK');
+
+-- Sample Flights for Today and Tomorrow
+-- Flight 1: Karachi to Islamabad (Today)
 INSERT INTO flight (airline_name, departure_city, arrival_city, departure_time, arrival_time) VALUES
-('Emirates', 'Dubai', 'Karachi', CURRENT_DATE + INTERVAL '2 days 08:00:00', CURRENT_DATE + INTERVAL '2 days 10:30:00'),
-('British Airways', 'London', 'New York', CURRENT_DATE + INTERVAL '3 days 11:00:00', CURRENT_DATE + INTERVAL '3 days 19:00:00'),
-('Qatar Airways', 'Doha', 'Lahore', CURRENT_DATE + INTERVAL '1 day 22:00:00', CURRENT_DATE + INTERVAL '2 days 03:00:00'),
-('PIA', 'Islamabad', 'London', CURRENT_DATE + INTERVAL '5 days 09:00:00', CURRENT_DATE + INTERVAL '5 days 17:00:00'),
-('Turkish Airlines', 'Istanbul', 'Paris', CURRENT_DATE + INTERVAL '2 days 14:00:00', CURRENT_DATE + INTERVAL '2 days 17:30:00'),
-('Lufthansa', 'Frankfurt', 'Tokyo', CURRENT_DATE + INTERVAL '4 days 20:00:00', CURRENT_DATE + INTERVAL '5 days 10:00:00');
+('PIA', 'Karachi', 'Islamabad', CURRENT_DATE + INTERVAL '14 hours', CURRENT_DATE + INTERVAL '16 hours'),
+('Airblue', 'Karachi', 'Islamabad', CURRENT_DATE + INTERVAL '18 hours', CURRENT_DATE + INTERVAL '20 hours'),
+('Serene Air', 'Karachi', 'Islamabad', CURRENT_DATE + INTERVAL '1 day 08 hours', CURRENT_DATE + INTERVAL '1 day 10 hours');
 
--- 2. Insert Seats for New Flights (Flights 7 to 12)
--- Flight 7 (Dubai -> Karachi)
+-- Seats for Flight 1 (PIA Today)
 INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(7, '1A', 'First', 'Available'), (7, '1B', 'First', 'Available'),
-(7, '5A', 'Business', 'Available'), (7, '5B', 'Business', 'Available'),
-(7, '10A', 'Economy', 'Available'), (7, '10B', 'Economy', 'Available'), (7, '10C', 'Economy', 'Available');
+(1, '1A', 'Business', 'Available'), (1, '1B', 'Business', 'Available'),
+(1, '10A', 'Economy', 'Available'), (1, '10B', 'Economy', 'Available'), (1, '10C', 'Economy', 'Available');
 
--- Flight 8 (London -> New York)
+-- Seats for Flight 2 (Airblue Today)
 INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(8, '1A', 'First', 'Available'), (8, '2A', 'First', 'Available'),
-(8, '10C', 'Business', 'Available'), (8, '10D', 'Business', 'Available'),
-(8, '30A', 'Economy', 'Available'), (8, '30B', 'Economy', 'Available');
+(2, '5A', 'Economy', 'Available'), (2, '5B', 'Economy', 'Available'), (2, '5C', 'Economy', 'Available');
 
--- Flight 9 (Doha -> Lahore)
+-- Seats for Flight 3 (Serene Tomorrow)
 INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(9, '1K', 'First', 'Available'), (9, '5J', 'Business', 'Available'),
-(9, '15A', 'Economy', 'Available'), (9, '15B', 'Economy', 'Available');
+(3, '1A', 'First', 'Available'), (3, '5A', 'Business', 'Available'), (3, '15A', 'Economy', 'Available');
 
--- Flight 10 (Islamabad -> London)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(10, '1A', 'First', 'Available'), (10, '8A', 'Business', 'Available'),
-(10, '22C', 'Economy', 'Available'), (10, '22D', 'Economy', 'Available');
 
--- Flight 11 (Istanbul -> Paris)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(11, '2A', 'Business', 'Available'), (11, '12F', 'Economy', 'Available');
+-- =========================================================================
+-- Flight Schedules — daily flights for ALL airport pairs (66 schedules)
+-- Airports: Karachi, Lahore, Islamabad, Dubai, London, New York
+-- Flights are auto-generated for the next 30 days on server startup.
+-- =========================================================================
 
--- Flight 12 (Frankfurt -> Tokyo)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(12, '1A', 'First', 'Available'), (12, '10A', 'Business', 'Available'), (12, '40A', 'Economy', 'Available');
+INSERT INTO flight_schedule (airline_name, departure_city, arrival_city, departure_time_daily, arrival_time_daily, frequency, day_of_week, start_date, end_date) VALUES
+('PIA', 'Karachi', 'Lahore', '06:00:00', '08:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Airblue', 'Karachi', 'Lahore', '10:00:00', '12:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Serene Air', 'Karachi', 'Lahore', '14:00:00', '16:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Karachi', 'Islamabad', '06:00:00', '08:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Airblue', 'Karachi', 'Islamabad', '10:00:00', '12:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Serene Air', 'Karachi', 'Islamabad', '14:00:00', '16:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Karachi', 'Dubai', '06:00:00', '08:10:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('FlyDubai', 'Karachi', 'Dubai', '10:00:00', '12:10:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'Karachi', 'London', '06:00:00', '14:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Karachi', 'London', '10:00:00', '18:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Karachi', 'New York', '06:00:00', '22:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Karachi', 'New York', '10:00:00', '02:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Lahore', 'Karachi', '06:00:00', '08:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Airblue', 'Lahore', 'Karachi', '10:00:00', '12:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Serene Air', 'Lahore', 'Karachi', '14:00:00', '16:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Lahore', 'Islamabad', '06:00:00', '07:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Airblue', 'Lahore', 'Islamabad', '10:00:00', '11:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Serene Air', 'Lahore', 'Islamabad', '14:00:00', '15:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Lahore', 'Dubai', '06:00:00', '09:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('FlyDubai', 'Lahore', 'Dubai', '10:00:00', '13:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'Lahore', 'London', '06:00:00', '13:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Lahore', 'London', '10:00:00', '17:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Lahore', 'New York', '06:00:00', '21:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Lahore', 'New York', '10:00:00', '01:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Islamabad', 'Karachi', '06:00:00', '08:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Airblue', 'Islamabad', 'Karachi', '10:00:00', '12:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Serene Air', 'Islamabad', 'Karachi', '14:00:00', '16:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Islamabad', 'Lahore', '06:00:00', '07:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Airblue', 'Islamabad', 'Lahore', '10:00:00', '11:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Serene Air', 'Islamabad', 'Lahore', '14:00:00', '15:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Islamabad', 'Dubai', '06:00:00', '09:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('FlyDubai', 'Islamabad', 'Dubai', '10:00:00', '13:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'Islamabad', 'London', '06:00:00', '13:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Islamabad', 'London', '10:00:00', '17:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Islamabad', 'New York', '06:00:00', '21:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'Islamabad', 'New York', '10:00:00', '01:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Dubai', 'Karachi', '06:00:00', '08:10:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('FlyDubai', 'Dubai', 'Karachi', '10:00:00', '12:10:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Dubai', 'Lahore', '06:00:00', '09:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('FlyDubai', 'Dubai', 'Lahore', '10:00:00', '13:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Dubai', 'Islamabad', '06:00:00', '09:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('FlyDubai', 'Dubai', 'Islamabad', '10:00:00', '13:15:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Dubai', 'London', '06:00:00', '13:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'Dubai', 'London', '10:00:00', '17:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'Dubai', 'New York', '06:00:00', '20:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'Dubai', 'New York', '10:00:00', '00:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'London', 'Karachi', '06:00:00', '14:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'London', 'Karachi', '10:00:00', '18:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'London', 'Lahore', '06:00:00', '13:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'London', 'Lahore', '10:00:00', '17:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'London', 'Islamabad', '06:00:00', '13:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'London', 'Islamabad', '10:00:00', '17:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'London', 'Dubai', '06:00:00', '13:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'London', 'Dubai', '10:00:00', '17:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'London', 'New York', '06:00:00', '14:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Virgin Atlantic', 'London', 'New York', '10:00:00', '18:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'New York', 'Karachi', '06:00:00', '22:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'New York', 'Karachi', '10:00:00', '02:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'New York', 'Lahore', '06:00:00', '21:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'New York', 'Lahore', '10:00:00', '01:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'New York', 'Islamabad', '06:00:00', '21:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('PIA', 'New York', 'Islamabad', '10:00:00', '01:30:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Emirates', 'New York', 'Dubai', '06:00:00', '20:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'New York', 'Dubai', '10:00:00', '00:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('British Airways', 'New York', 'London', '06:00:00', '14:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31'),
+('Virgin Atlantic', 'New York', 'London', '10:00:00', '18:00:00', 'Daily', NULL, '2026-01-01', '2027-12-31');
 
--- 3. Insert Domestic Pakistan Flights (Flights 13 to 20)
-INSERT INTO flight (airline_name, departure_city, arrival_city, departure_time, arrival_time) VALUES
-('PIA', 'Karachi', 'Peshawar', CURRENT_DATE + INTERVAL '1 day 07:00:00', CURRENT_DATE + INTERVAL '1 day 09:00:00'),
-('AirBlue', 'Peshawar', 'Karachi', CURRENT_DATE + INTERVAL '1 day 11:00:00', CURRENT_DATE + INTERVAL '1 day 13:00:00'),
-('Serene Air', 'Islamabad', 'Quetta', CURRENT_DATE + INTERVAL '2 days 10:00:00', CURRENT_DATE + INTERVAL '2 days 11:45:00'),
-('PIA', 'Quetta', 'Islamabad', CURRENT_DATE + INTERVAL '2 days 14:00:00', CURRENT_DATE + INTERVAL '2 days 15:45:00'),
-('AirSial', 'Lahore', 'Multan', CURRENT_DATE + INTERVAL '1 day 08:30:00', CURRENT_DATE + INTERVAL '1 day 09:30:00'),
-('Fly Jinnah', 'Multan', 'Lahore', CURRENT_DATE + INTERVAL '1 day 16:00:00', CURRENT_DATE + INTERVAL '1 day 17:00:00'),
-('PIA', 'Karachi', 'Sialkot', CURRENT_DATE + INTERVAL '3 days 09:00:00', CURRENT_DATE + INTERVAL '3 days 10:45:00'),
-('AirBlue', 'Sialkot', 'Karachi', CURRENT_DATE + INTERVAL '3 days 13:00:00', CURRENT_DATE + INTERVAL '3 days 14:45:00');
+-- Seed standard seat templates dynamically for ALL flight schedules to make sure seats are always generated
+INSERT INTO schedule_seat_template (schedule_id, seat_number, seat_class)
+SELECT s.schedule_id, t.seat_num, t.seat_cls
+FROM flight_schedule s
+CROSS JOIN (VALUES 
+    ('1A', 'First'), ('1B', 'First'),
+    ('2A', 'Business'), ('2B', 'Business'), ('2C', 'Business'), ('2D', 'Business'),
+    ('10A', 'Economy'), ('10B', 'Economy'), ('10C', 'Economy'), ('10D', 'Economy'), ('10E', 'Economy'), ('10F', 'Economy'),
+    ('11A', 'Economy'), ('11B', 'Economy'), ('11C', 'Economy'), ('11D', 'Economy'), ('11E', 'Economy'), ('11F', 'Economy'),
+    ('12A', 'Economy'), ('12B', 'Economy'), ('12C', 'Economy'), ('12D', 'Economy'), ('12E', 'Economy'), ('12F', 'Economy')
+) AS t(seat_num, seat_cls);
 
--- 4. Insert Seats for New Domestic Flights (Flights 13 to 20)
--- Flight 13 (Karachi -> Peshawar)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(13, '1A', 'Business', 'Available'), (13, '1B', 'Business', 'Available'),
-(13, '5A', 'Economy', 'Available'), (13, '5B', 'Economy', 'Available'), (13, '5C', 'Economy', 'Available');
 
--- Flight 14 (Peshawar -> Karachi)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(14, '2A', 'Business', 'Available'), (14, '10A', 'Economy', 'Available'), (14, '10B', 'Economy', 'Available');
-
--- Flight 15 (Islamabad -> Quetta)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(15, '1A', 'Business', 'Available'), (15, '12F', 'Economy', 'Available'), (15, '12E', 'Economy', 'Available');
-
--- Flight 16 (Quetta -> Islamabad)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(16, '1C', 'Business', 'Available'), (16, '20A', 'Economy', 'Available'), (16, '20B', 'Economy', 'Available');
-
--- Flight 17 (Lahore -> Multan)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(17, '1A', 'Economy', 'Available'), (17, '1B', 'Economy', 'Available'), (17, '1C', 'Economy', 'Available'), (17, '1D', 'Economy', 'Available');
-
--- Flight 18 (Multan -> Lahore)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(18, '2A', 'Economy', 'Available'), (18, '2B', 'Economy', 'Available'), (18, '2C', 'Economy', 'Available');
-
--- Flight 19 (Karachi -> Sialkot)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(19, '1A', 'Business', 'Available'), (19, '10A', 'Economy', 'Available'), (19, '10B', 'Economy', 'Available');
-
--- Flight 20 (Sialkot -> Karachi)
-INSERT INTO seat (flight_id, seat_number, seat_class, seat_status) VALUES
-(20, '1B', 'Business', 'Available'), (20, '15A', 'Economy', 'Available'), (20, '15B', 'Economy', 'Available');
